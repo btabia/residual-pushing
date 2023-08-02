@@ -1,0 +1,51 @@
+name: playing
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+RL: 
+  headless: False
+  policy_kwargs:
+    nn_config: 
+      activation_function: "Relu" 
+      value_function: [128,128,128]
+      policy: [128,128,128]
+  policy:
+    type: "MLP"
+  max_timestep : 400000000
+  checkpoint: 
+    saving_freq: 500000
+    base_directory: "./training_data/"
+  load_policy: False
+  load_policy_path: ""
+
+  PPO: 
+    verbose: 1 
+    n_steps: 3840
+    batch_size: 192 # prev 64, take the episode length and divide it by 2
+    learning_rate: 0.000125 # prev 0.000125, new 4.17e-05
+    gamma: 0.99
+    ent_coef: 0.000001
+    clip_range: 0.2
+    n_epochs: 10
+    gae_lambda: 0.95
+    max_grad_norm: 0.9
+    vf_coef:  1
+    device: "cuda"
+    tensorboard_log: "./training_data/"
+    normalize_advantage: True
+    target_kl: 0.005
+
+  env: 
+
+
+  obs:
+
+  actions: 
+
+  rewards: 
+
+  reset: 
+

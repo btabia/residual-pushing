@@ -1,0 +1,102 @@
+name: training
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+general: 
+
+  env_file_name: "../../../push_gym/push_gym/tasks/pushing.py"
+  train_file_name: "parameters.yaml"
+  utils: "../../../push_gym/push_gym/utils/utils.py"
+  curriculum_tasks_file_name:  "../../../push_gym/push_gym/tasks/curriculum_tasks.py"
+  tf_model_path: "/home/btabia/git/residual-pushing/Networks/VAE/saved_model/example_vae_1"
+  evaluation_save_path: "../../../push_gym/push_gym/evaluation/evaluation_folders/example_evaluation/"
+  log_dir_name: "/home/btabia/git/residual-pushing/testing_model"
+  tensorboard_log_name: "example_agent_model_1"
+  train: True
+  load_model: False
+  curriculum: False
+  Algorithm: "PPO"
+  policy: "MlpPolicy"
+  max_timesteps: 2000000000
+  env_name: 'pushingGUI-v0'
+  end_effector: "gripper" # gripper or rod
+  obstacle_num: 0
+  arm_position: [0.0, -0.198, 0.021]
+  test_baseline: False
+  json_file_path: "../../../push_gym/push_gym/evaluation/evaluation_samples/environment_sample_wo_obst.txt"
+
+RL: 
+  headless: False
+  policy_kwargs:
+    nn_config: 
+      activation_function: "Relu" 
+      value_function: [128,128,128]
+      policy: [128,128,128]
+  policy:
+    type: "MLP"
+  max_timestep : 400000000
+  checkpoint: 
+    saving_freq: 500000
+    base_directory: "../../../training_records/"
+  load_policy: False
+  load_policy_path: ""
+
+  PPO: 
+    verbose: 1 
+    n_steps: 30000
+    batch_size: 1500 # prev 64, take the episode length and divide it by 2
+    learning_rate: 0.000125 # prev 0.000125, new 4.17e-05
+    gamma: 0.99
+    ent_coef: 0.0001
+    clip_range: 0.2
+    n_epochs: 10
+    gae_lambda: 0.95
+    max_grad_norm: 0.9
+    vf_coef:  1
+    device: "cuda"
+    tensorboard_log: "./training_data/"
+    normalize_advantage: True
+    target_kl: 0.005
+
+  env: 
+    physics_frequency : 100
+    rendering_frequency: 100
+    skipframe: 1
+    max_episode_length: 3000
+    seed: 0
+    num_action: 4
+    num_observations: 25
+    arm_position: [0.0, -0.198, 0.021]
+
+  action: 
+    x_force_scale: 10
+    y_force_scale: 10
+    z_force_scale: 10
+    yaw_scale: 20
+    joint_torque_limit: 150
+
+  controller: 
+    linear_proportional_gain: [300,300,300]# no density [3000,3000,3000]
+    angular_proportional_gain: [10,10,10]# no density [20000,20000,500]
+    linear_derivative_gain: [20,20,20]# no density[700, 700, 700]
+    angular_derivative_gain: [1,1,1]# no density [15, 15, 0.5] 
+  
+
+  reward: 
+    speed_target: 4
+    object_goal_disp_weight: 1
+    object_goal_dist_weight: 20
+
+    object_goal_speed_tolerance: 1
+    object_goal_dist_tolerance: 0.5
+
+
+  reset: 
+    object_goal_dist_done: 0.1
+    max_debris_dist : 0.8
+    max_goal_dist: 0.8
+    exclusion_dist : 0.11
+

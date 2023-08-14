@@ -20,7 +20,7 @@ general:
   curriculum: False
   Algorithm: "PPO"
   policy: "MlpPolicy"
-  max_timesteps: 400000000
+  max_timesteps: 30000000
   env_name: 'pushingGUI-v0'
   end_effector: "gripper" # gripper or rod
   obstacle_num: 0
@@ -33,11 +33,11 @@ RL:
   policy_kwargs:
     nn_config: 
       activation_function: "Relu" 
-      value_function: [128,128,128]
-      policy: [128,128,128]
+      value_function: [512,256,128]
+      policy: [512,256,128]
   policy:
     type: "MLP"
-  max_timestep : 400000000
+  max_timestep : 30000000
   checkpoint: 
     saving_freq: 500000
     base_directory: "../../../training_records/"
@@ -46,14 +46,14 @@ RL:
 
   PPO: 
     verbose: 1 
-    n_steps: 10000
-    batch_size: 500 # prev 64, take the episode length and divide it by 2
+    n_steps: 30000
+    batch_size: 1500 # prev 64, take the episode length and divide it by 2
     learning_rate: 0.000125 # prev 0.000125, new 4.17e-05
     gamma: 0.99
     ent_coef: 0.0001
-    clip_range: 0.2
+    clip_range: 0.1
     n_epochs: 10
-    gae_lambda: 0.90
+    gae_lambda: 0.95
     max_grad_norm: 0.9
     vf_coef:  1
     device: "cuda"
@@ -65,23 +65,30 @@ RL:
     physics_frequency : 100
     rendering_frequency: 100
     skipframe: 1
-    max_episode_length: 1000
+    max_episode_length: 3000
     seed: 0
-    num_action: 4
-    num_observations: 31
+    num_action: 6
+    num_observations: 19
     arm_position: [0.0, -0.198, 0.021]
 
   action: 
-    x_force_scale: 5
-    y_force_scale: 5
-    z_force_scale: 5
+    x_force_scale: 60
+    y_force_scale: 60
+    z_force_scale: 60
+    dx: 0.3
+    dy: 0.3
+    dz: 0.3
+    ddx: 0.1
+    ddy: 0.1
+    ddz: 0.1
     yaw_scale: 20
+    yaw_scale_vel: 10
     joint_torque_limit: 150
 
   controller: 
-    linear_proportional_gain: [60,60,60] #[50,50,300]# no density [3000,3000,3000]
+    linear_proportional_gain: [80,80,80] #[50,50,300]# no density [3000,3000,3000]
     angular_proportional_gain: [10,10,10] #[10,10,10]# no density [20000,20000,500]
-    linear_derivative_gain: [1,1,1] #[1,1,2]# no density[700, 700, 700]
+    linear_derivative_gain: [20,20,20] #[1,1,2]# no density[700, 700, 700]
     angular_derivative_gain: [1,1,1] #[1,1,1]# no density [15, 15, 0.5] 
   
 
@@ -90,12 +97,15 @@ RL:
     object_goal_disp_weight: 1
     object_goal_dist_weight: 20
 
-    object_goal_speed_tolerance: 4
-    object_goal_dist_tolerance: 0.5
+    object_goal_speed_tolerance: 1
+    object_goal_dist_tolerance: 0.1
 
 
   reset: 
+    init_target_pos: [0, -0.5, 0]
     object_goal_dist_done: 0.1
+    obj_dist_min: 0.05
+    obj_dist_max: 0.3
     max_debris_dist : 0.8
     max_goal_dist: 0.8
     exclusion_dist : 0.11

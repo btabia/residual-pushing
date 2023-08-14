@@ -498,14 +498,15 @@ class Utils:
         #    self.reset_obj(obj_id)
         return obj_id
 
-    def reset_obj(self, id, positons=None, distance=None):
-        if positons:
-            self.reset_obj_fix()
-            return
-        if "random" in self.obj_config:
-                self.reset_obj_random(id)
-        if "static" in self.obj_config:
-            set_pose(id, self.sim.init_obj_conf, self._p, self.client_id)
+    def reset_obj(self, id, positions=None, distance=None):
+        self.reset_obj_fix(id, positions)
+       # if positions!=None:
+        #    self.reset_obj_fix(id, positions)
+        #    return
+        #if "random" in self.obj_config:
+        #        self.reset_obj_random(id)
+        #if "static" in self.obj_config:
+        #    set_pose(id, self.sim.init_obj_conf, self._p, self.client_id)
 
     def reset_obj_random(self, id):
         collision = True
@@ -526,16 +527,15 @@ class Utils:
         return
 
 
-    def reset_obj_fix(self, id, positions):
-        pos = positions[0]
-        ori = positions[1]
-        if len(positions) == 3:
-            ori = quat_from_euler([0,0,positions[2]])
-            pos = positions[0:2]+[self.sim._workspace_bounds[2,0]]
+    def reset_obj_fix(self, id, position):
+        pos = position
+        ori = [0,0,0,1]
         set_pose(id, (pos, ori), self._p, self.client_id)
         self._p.stepSimulation(physicsClientId=self.client_id)
         #self.sim.step_simulation(self.sim.per_step_iterations)
         return
+    
+
 
     def get_random_non_cubic_object(self):
         urdf_pattern = os.path.join(self.sim._urdfRoot, 'random_urdfs/*[1-9]/*.urdf')

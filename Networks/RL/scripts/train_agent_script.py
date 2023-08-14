@@ -108,7 +108,7 @@ def setup_PPO(cfg, env, saving_path):
                 vf_coef = cfg["RL"]["PPO"]["vf_coef"],
                 device = cfg["RL"]["PPO"]["device"],
                 tensorboard_log = saving_path,
-                #target_kl = cfg["RL"]["PPO"]["target_kl"]
+                target_kl = cfg["RL"]["PPO"]["target_kl"]
             )
     if cfg["RL"]["load_policy"] == True:
         model.set_parameters(cfg["RL"]["load_policy_path"])
@@ -211,7 +211,7 @@ def train(cfg):
     model.learn(total_timesteps=cfg["RL"]["max_timestep"], callback = callback_list)
 
     print("------  Saving Model Policy ------")
-    model.save(cfg["RL"]["log_dir_name"] + "policy")
+    model.save(saving_path + "policy")
     env._p.unloadPlugin(env.plugin)
     print("------  Closing Environment ------")
     env.close()

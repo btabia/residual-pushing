@@ -44,6 +44,7 @@ class Pushing(ArmSim):
 
 
         self.previous_debris_target_quad_dist = 0
+        self.debris_target_dist = 0
         self.previous_time = 0
         self.delta_time = 0
         #Generate pushable object
@@ -52,8 +53,8 @@ class Pushing(ArmSim):
         self.current_obj_conf = get_config(self.pushing_object_id, self._p, self.client_id)
         self.last_obj_conf = self.current_obj_conf
         #Generate first random goal
-        self.goal_obj_conf = self.utils.generate_random_goal(self.pushing_object_id)
-        self.utils.debug_gui_target(np.asarray(self.goal_obj_conf[0]))
+        #self.goal_obj_conf = self.utils.generate_random_goal(self.pushing_object_id)
+
         #self.utils.debug_gui_target(np.asarray(self.goal_obj_conf[0]))
         #self.get_relative_coodinates_in_obj_frame()
         self.step_simulation(self.per_step_iterations)
@@ -76,6 +77,8 @@ class Pushing(ArmSim):
     
         self.initial_arm_position = self.cfg["general"]["arm_position"]
         self._max_episode_steps = self.cfg["RL"]["env"]["max_episode_length"]
+        self.goal_obj_conf = self.utils.generate_fixed_goal(np.array(self.cfg["RL"]["reset"]["init_target_pos"]))
+        self.utils.debug_gui_target(np.asarray(self.goal_obj_conf[0]))
         #define action and observation space for RL
         self._set_action_space()
         self._set_observation_space()
@@ -207,10 +210,10 @@ class Pushing(ArmSim):
                 self.tool_object_pos,
                 self.tool_object_vel,
                 self.tool_target_pos,
-                self.tool_target_vel,
-                self.robot_joint_pos, 
-                self.obj_orientation, 
-                self.size
+                self.tool_target_vel
+                #self.robot_joint_pos
+                #self.obj_orientation, 
+                #self.size
             ]
         )
         return obs
@@ -227,28 +230,48 @@ class Pushing(ArmSim):
 
     def reset_task(self):
         self.is_reset = True
+        self.debris_target_vel = 0
+        self.previous_debris_target_quad_dist = 0
+        self.debris_target_dist = 0
+        self.previous_time = 0
+        self.delta_time = 0
+        central_target = np.array(self.cfg["RL"]["reset"]["init_target_pos"])
+        obj_distance_min = self.cfg["RL"]["reset"]["obj_dist_min"]
+        obj_distance_max = self.cfg["RL"]["reset"]["obj_dist_max"]
+        delta_dist = obj_distance_max - obj_distance_min
+        obj_ang = np.random.rand() * np.pi * 2
+        x_obj_pos = central_target[0] + (obj_distance_min + np.random.rand() * delta_dist) * np.cos(obj_ang)
+        y_obj_pos = central_target[1] + (obj_distance_min + np.random.rand() * delta_dist) * np.sin(obj_ang)
+        obj_pos = np.array([x_obj_pos, y_obj_pos, 0.01])
+        x_ee_pos = central_target[0] + (obj_distance_min + np.random.rand() * delta_dist) * np.cos(obj_ang)
+        y_ee_pos = central_target[1] + (obj_distance_min + np.random.rand() * delta_dist) * np.sin(obj_ang)
+        z_ee_pos = np.random.rand() * 0.5
+        ee_pos = np.array([x_ee_pos, y_ee_pos, z_ee_pos])
         # reset sim to initial status
         reset_sim(self.world_id, self._p)
         # ramdomly reset the position of the object
-        self.utils.reset_obj(self.pushing_object_id)
+        self.utils.reset_obj(self.pushing_object_id, obj_pos)
         self.step_simulation(self.per_step_iterations)
         self.current_obj_conf = get_config(self.pushing_object_id, self._p, self.client_id)
         self.last_obj_conf = self.current_obj_conf
         # randomly reset the position of the goal
-        self.goal_obj_conf = self.utils.generate_fixed_goal(np.array([0, -0.5, 0]))
-        #self.goal_obj_conf = self.utils.generate_random_goal(self.pushing_object_id, 2, max_distance=0.6, min_distance=0.3) #minmax
+        self.goal_obj_conf = self.utils.generate_fixed_goal(np.array(self.cfg["RL"]["reset"]["init_target_pos"]))
+        #self.goal_obj_conf = self.utils.generate_random_goal(self.pushing_object_id, 2, max_distance=0.5, min_distance=0.2) #minmax
         self.utils.debug_gui_target(np.asarray(self.goal_obj_conf[0]))
         self._reset_arm()
         # reset object init and goal position and calculate initial distances
-        self.utils.reset_obj(self.pushing_object_id)
-        self.step_simulation(self.per_step_iterations)
-        self.current_obj_conf = get_config(self.pushing_object_id, self._p, self.client_id)
-        self.last_obj_conf = self.current_obj_conf
+        #self.utils.reset_obj(self.pushing_object_id)
+        #self.step_simulation(self.per_step_iterations)
+        #self.current_obj_conf = get_config(self.pushing_object_id, self._p, self.client_id)
+        #self.last_obj_conf = self.current_obj_conf
         # randomly reset the position of the arm
-         #reset arm pose
-        x_trans, y_trans = np.random.choice([-1, 1], 2) * np.random.uniform(0.08, 0.1, 2)
-        arm_pose = np.asarray(get_point(self.pushing_object_id, self._p, self.client_id)) - [x_trans, y_trans, 0.01]
-        target_joint_states = self.get_ik_joints(arm_pose, [np.pi, 0, 0], self._robot_tool_center)[:6]
+         #reset end effector position
+        ee_x_pos = np.random.rand() * 0.2
+        ee_y_pos = np.random.rand() * 0.2
+        #x_trans, y_trans = np.random.choice([-1, 1], 2) * np.random.uniform(0.08, 0.1, 2)
+        #arm_pose = np.asarray(get_point(self.pushing_object_id, self._p, self.client_id)) - [ee_x_pos, ee_y_pos, 0.01]
+        #arm_pose = central_target + n
+        target_joint_states = self.get_ik_joints(ee_pos, [np.pi, 0, 0], self._robot_tool_center)[:6]
         self._reset_arm(target_joint_states)
 
         self.f = [0,0,0,0,0,0]
@@ -299,7 +322,7 @@ class Pushing(ArmSim):
         #print("reward_displacement: " + str(reward_displacement))
         reward_distance = reward_dist_weight * (np.exp((-pow(self.debris_target_dist,2))/(2*pow(reward_distance_tolerance,2))))
 
-        total_reward = reward_displacement + reward_distance
+        total_reward = reward_displacement
         self.mean_total_reward_cumul = self.mean_total_reward_cumul + total_reward
         self.mean_disp_reward_cumul = self.mean_disp_reward_cumul + reward_displacement
         self.mean_dist_reward_cumul = self.mean_dist_reward_cumul + reward_distance
@@ -315,48 +338,6 @@ class Pushing(ArmSim):
         if self.debris_target_dist < 1: done = True # self.target_distance_reach: done = True
         return done
 
-    def _robot_impedance_control(self):
-        from push_gym.utils.transformations import quaternion_from_euler
-        # update motion controller command 
-        # 1. pd linear control
-        lin_pos_command = self.object_position
-        lin_vel_command = self.object_velocity
-        self.motion_controller.setLinearPositionsCommand(lin_pos_command)
-        self.motion_controller.setLinearVelocitiesCommand(lin_vel_command)
-        self.forces = self.motion_controller.linearControlRobot()
-
-        # 2. pd angular control
-        ang_pos_command = quaternion_from_euler(np.pi,0,(np.pi/2))
-        self.motion_controller.setAngularPositionsCommand(ang_pos_command)
-        ang_vel_command = np.array([0,0,0])
-        self.motion_controller.setAngularVelocitiesCommand(ang_vel_command)
-        self.moments = self.motion_controller.angularControlQuaternion()
-
-        compensation_torques = np.asarray(super().get_gravity_compensation(self.robot_joint_pos.tolist(), self.robot_joint_vel.tolist()))
-
-
-        self.total_forces = self.forces
-        self.forces_moments = np.array([self.total_forces[0], self.total_forces[1], self.total_forces[2],
-                                        self.moments[0][0], self.moments[0][1], self.moments[0][2]])
-        self.joint_torque_commands =  compensation_torques + np.matmul(self.jacobian.transpose(), self.forces_moments)
-        
-        # apply force moment to robotic manipulator
-
-        max_torque = np.array([150,150,150,150,150,150])
-        for i in range(6):
-            if self.joint_torque_commands[i] > max_torque[i]:
-                self.joint_torque_commands[i] = max_torque[i]
-            if self.joint_torque_commands[i] < -max_torque[i]:
-                self.joint_torque_commands[i] = -max_torque[i]
-
-        self._p.setJointMotorControlArray(
-                        self.robot_arm_id, 
-                        jointIndices = self._robot_joint_indices,
-                        controlMode = self._p.TORQUE_CONTROL, 
-                        forces = self.joint_torque_commands,
-                        physicsClientId = self.client_id
-        )
-        return
 
     def _apply_action(self, action):
         from push_gym.utils.transformations import quaternion_from_euler
@@ -364,18 +345,24 @@ class Pushing(ArmSim):
         x_force = action[0] * self.cfg["RL"]["action"]["x_force_scale"]
         y_force = action[1] * self.cfg["RL"]["action"]["y_force_scale"]
         z_force = action[2] * self.cfg["RL"]["action"]["z_force_scale"]
-        yaw = action[3] * np.pi * self.cfg["RL"]["action"]["yaw_scale"]
+        #dx = action[0] * self.cfg["RL"]["action"]["dx"]
+        #dy = action[1]* self.cfg["RL"]["action"]["dy"]
+        #dz = action[2] * self.cfg["RL"]["action"]["dz"]
+        #ddx = action[3] * self.cfg["RL"]["action"]["ddx"]
+        #ddy = action[4] * self.cfg["RL"]["action"]["ddy"]
+        #ddz = action[5] * self.cfg["RL"]["action"]["ddz"]
+        #yaw = (np.pi) + action[3] * (np.pi / 2)
+        #yaw_vel = action[4] * np.pi * 10
         # update motion controller command 
         # 1. pd linear control
-        lin_pos_command = self.object_position
-        lin_pos_command[2] = 0
-        lin_vel_command = self.object_velocity
+        lin_pos_command = self.object_position #+ np.array([dx,dy,dz])
+        lin_vel_command = self.object_velocity #+ np.array([ddx,ddy,ddz])
         self.motion_controller.setLinearPositionsCommand(lin_pos_command)
         self.motion_controller.setLinearVelocitiesCommand(lin_vel_command)
         self.forces = self.motion_controller.linearControlRobot()
 
         # 2. pd angular control
-        ang_pos_command = quaternion_from_euler(np.pi,0,(np.pi/2))
+        ang_pos_command = quaternion_from_euler(np.pi,0,(np.pi))
         self.motion_controller.setAngularPositionsCommand(ang_pos_command)
         ang_vel_command = np.array([0,0,0])
         self.motion_controller.setAngularVelocitiesCommand(ang_vel_command)

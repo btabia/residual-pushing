@@ -132,7 +132,8 @@ class PDController:
         error  = error_frame #np.matmul(-rot_mat[0:3, 0:3], error_frame)
         angular_position_output = self.angular_P_gain * error
         euler_obs  = np.asarray(euler_from_quaternion(quat_obs))
-        euler_obs_deg = euler_obs * (180/np.pi)
+        #euler_obs_deg = euler_obs * (180/np.pi)
+        #print("euler_obs_deg: " + str(euler_obs_deg))
         angular_velocity_error = self.angular_velocity_command - self.angular_velocity_observation
         angular_velocity_output = angular_velocity_error * self.angular_D_gain
         moment_output = angular_position_output + angular_velocity_output

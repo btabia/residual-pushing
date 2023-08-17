@@ -1,5 +1,5 @@
-from test_agent_script import test_agent
-from train_agent_script import train_model, train
+from test_agent_script import play
+from train_agent_script import  train
 import sys, os
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -32,12 +32,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../push_gym/push_
 #        print("------ Testing Model ------")
 #        test_agent(params[4], params[5], params[6], params[16], params[14], params[17], params[18], params[19])
 
-@hydra.main(config_name="training", config_path="./config")
+@hydra.main(config_name="playing", config_path="./config")
 def parse_hydra_configs(cfg: DictConfig) -> None:
 
     cwd = os.getcwd()
     hydra_folder_path = cwd + "/.hydra"
     config_file_path = hydra_folder_path + "/config.yaml"
+    print("file path: " + str(cwd))
 
     if cfg["name"] == "training":
         print("------ Training Model ------")
@@ -45,6 +46,7 @@ def parse_hydra_configs(cfg: DictConfig) -> None:
     
     if cfg["name"] == "playing":
         print("------ Playing Model ------")
+        play(cfg)
 
 
 if __name__ == '__main__':

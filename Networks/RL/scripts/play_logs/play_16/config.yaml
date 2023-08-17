@@ -1,0 +1,152 @@
+name: "multiparticles"
+
+# set the directory where the output files get saved
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+play:
+  policy_path: "/home/btabia/git/RRL_pushing/training_data/PPO_4/policy.zip" # /home/btabia/git/virtual-decontamination/records/PPO_592/policy.zip"
+  max_iteration: 3
+  deterministic: False
+  logger: True
+  headless: False
+  data_log_path: "./play_logs/"
+
+training: 
+  headless: True
+  policy_kwargs:
+    nn_config: 
+      activation_function: "Relu" # prev Relu / next : test it with tanh
+      value_function: [128,128,128]
+      policy: [128,128,128]
+  policy:
+    type: "MLP"
+  max_timestep : 6000000
+  checkpoint: 
+    saving_freq: 50000
+    base_directory: "./training_data/"
+  load_policy: True
+  load_policy_path: "/home/btabia/git/RRL_pushing/training_data/PPO_2/policy.zip"
+  PPO: 
+    verbose: 1 
+    n_steps: 3840
+    batch_size: 192 # prev 64, take the episode length and divide it by 2
+    learning_rate: 0.0000125 # prev 0.000125, new 4.17e-05
+    gamma: 0.99
+    ent_coef: 0
+    clip_range: 0.2
+    n_epochs: 10
+    gae_lambda: 0.95
+    max_grad_norm: 0.9
+    vf_coef:  1
+    device: "cuda"
+    tensorboard_log: "./training_data/"
+    normalize_advantage: True
+    target_kl: 0.005
+
+
+
+env: 
+  headless: True
+  active_gpu : 0
+  physics_gpu : 0
+  anti_aliasing : 0
+  multi_gpu: True
+  num_envs : 1
+  physics_freq : 100
+  rendering_freq : 25
+  skipframe : 1
+  max_episode_length : 1000 #384 # 320 seconds
+  seed : 0
+  num_actions: 4 # 3 lpos 4 apos 3 lvel 3 avel
+  num_observations : 17
+  num_debris: 1
+
+  world: 
+    physics_prim_path: "/World/PhysicsScene"
+    stage_unit_in_meters: 1 # 1 unit => 1 dm =>10 cm
+    enable_gpu_dynamics : True
+
+  task: 
+    brush_usd_path: "/assets/long_scrapper.usd"
+    table_usd_path: "/assets/table-env.usd"
+    debris_usd_path: "./assets/debris.usd"
+    target_usd_path: "./assets/target.usd"
+    robot_usd_path: "./assets/robot.usd"
+
+    brush_prim_path: "/World/brush"
+    handle_prim_path: "/World/brush/handle"
+    table_prim_path: "/World/table"
+    debris_prim_path: "/World/Debris"
+    target_prim_path: "/World/Target"
+    robot_prim_path: "/World/Robot"
+
+    brush_init_pos: [0, 0, 2.5]
+    brush_init_orientation: [1, 0, 0, 0]
+    debris_init_pos: [8, 8, 2.06]
+    dist_between_debris: 0.5
+    debris_init_orientation: [1, 0 ,0 ,0]
+    debris_scale: [0.1, 0.1, 0.1]
+    debris_color: [0, 1, 0] # set it to green as the stage is blue
+    debris_mass: 0.01 # 10 gramme
+    target_init_pos: [8, 8, 2.06]
+    target_init_orientation: [1, 0, 0, 0]
+    target_scale: [1, 1, 1]
+    target_color: [1, 0, 0]
+    target_radius: 0.5
+    target_height: 1
+
+    action: 
+      normal_force_scale: 6
+      shear_force_scale: 6
+      yaw_scale: 1000
+      yaw_rate_scale: 10
+      pd_force_limit: [5,5,5]
+      pd_moment_limit: [100, 100, 1]
+
+
+
+    controller: 
+      linear_proportional_gain: [3,3,3]# no density [3000,3000,3000]
+      angular_proportional_gain: [80,80,2]# no density [20000,20000,500]
+      linear_derivative_gain: [1,1,1]# no density[700, 700, 700]
+      angular_derivative_gain: [1,1, 0.001]# no density [15, 15, 0.5] 
+
+
+    reward:
+      base_debris_target_scale: 1
+      debris_target_velocity: 4 # 1m/s
+      debris_target_velocity_tolerance: 1
+      brush_debris_radius: 0.2
+      brush_debris_velocity: 15
+      brush_debris_velocity_tolerance: 2
+      max_target_radius_debris: 4
+      target_debris_angle_tolerance: 0.1
+
+      distance_offset: 100
+
+      displacement_tolerance_penalty: 1
+      displacement_penalty: 0
+      target_debris_dist_weight: 30
+      target_debris_disp_weight: 1
+      target_debris_ang_weight: 2
+
+    
+    done:
+      debris_target_dist_done: 0.5
+      max_target_radius_debris: 15
+      max_target_radius_brush: 15
+      brush_x_limit: 16
+      brush_y_limit: 16
+      brush_z_limit: 0.1
+      
+
+    reset: 
+      randomise_target: True
+      randomise_debris: True
+      randomise_brush_orientation: False
+      base_debris_dist: 4
+      base_target_dist: 4
+      exclusion_dist : 2

@@ -58,7 +58,7 @@ class DataRecorder:
                     }
 
     def save_episode_file(self, file_path):
-        with open(file_path + "sample.json", "w") as outfile:
+        with open(file_path, "w") as outfile:
             json.dump(self.data, outfile)
     
     def clear_dict(self) -> None:

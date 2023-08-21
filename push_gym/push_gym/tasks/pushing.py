@@ -11,6 +11,7 @@ import tensorflow as tf
 from push_gym.utils.datarecorder import DataRecorder
 from push_gym.utils.custom_utils import  get_point, get_config, reset_sim
 import threading
+import os
 
 
 class Pushing(ArmSim):
@@ -43,6 +44,14 @@ class Pushing(ArmSim):
         self.mean_normal_residual_force_cumul = 0
         self.mean_normal_impedance_force_cumul = 0
 
+        self.episode_index = 0
+
+        self.x_force = 0
+        self.y_force = 0
+        self.z_force = 0
+
+        self.forces = np.zeros(3)
+
 
         self.previous_debris_target_quad_dist = 0
         self.debris_target_dist = 0
@@ -50,7 +59,8 @@ class Pushing(ArmSim):
         self.delta_time = 0
         #Generate pushable object
         self.pushing_object_id = -1
-        self.pushing_object_id = self.utils.generate_obj()
+        #self.pushing_object_id = self.utils.generate_obj()
+        self.pushing_object_id = self.generate_random_object_dyn()
         self.current_obj_conf = get_config(self.pushing_object_id, self._p, self.client_id)
         self.last_obj_conf = self.current_obj_conf
         #Generate first random goal
@@ -62,6 +72,16 @@ class Pushing(ArmSim):
         #save initial world state
         self.world_id = self._p.saveState()
         self.set_important_variables()
+
+    def generate_random_object_dyn(self):
+        #object_range = ["small_cube", "large_cube", "duck", "metal_cube", "lego"]
+        #object = np.random.choice(object_range)
+        obj_id = self.utils.get_cube_obj(
+            mass=1,
+            lateral_friction=0.5,
+            rolling_friction=0.00001
+        )
+        return obj_id
 
 
     def setup_config(self, cfg):
@@ -207,6 +227,7 @@ class Pushing(ArmSim):
         self.mean_object_target_speed_cumul = self.mean_object_target_speed_cumul + np.linalg.norm(self.debris_target_vel)
         self.mean_object_target_dist_cumul = self.mean_object_target_dist_cumul + np.linalg.norm(self.debris_target_pos)
 
+        res_forces = np.array([self.x_force, self.y_force, self.z_force])
         #saving data to dict
         data = {
             "ee_orientation": self.ee_orientation.tolist(),
@@ -215,7 +236,9 @@ class Pushing(ArmSim):
             "tool_object_vel": self.tool_object_vel.tolist(),
             "tool_target_pos": self.tool_target_pos.tolist(),
             "tool_target_vel": self.tool_target_vel.tolist(),
-            "robot_joint_pos": self.robot_joint_pos.tolist()
+            "robot_joint_pos": self.robot_joint_pos.tolist(),
+            "interaction_forces": self.forces.tolist(),
+            "residual_forces": res_forces.tolist()
         }
         if self.cfg["name"] == "playing":
             self.datarecorder.set_new_frame( frame_id = self.current_steps,
@@ -231,9 +254,6 @@ class Pushing(ArmSim):
                 self.tool_object_vel,
                 self.tool_target_pos,
                 self.tool_target_vel,
-                #self.robot_joint_pos
-                #self.obj_orientation, 
-                #self.size
             ]
         )
         return obs
@@ -255,6 +275,11 @@ class Pushing(ArmSim):
         self.debris_target_dist = 0
         self.previous_time = 0
         self.delta_time = 0
+        # remove the current body to push
+        #if self.pushing_object_id is not None: 
+        #    self._p.removeBody(self.pushing_object_id)
+        # generate new object to push
+        self.pushing_object_id = self.utils.generate_new_dynamics(self.pushing_object_id)
         central_target = np.array(self.cfg["RL"]["reset"]["init_target_pos"])
         obj_distance_min = self.cfg["RL"]["reset"]["obj_dist_min"]
         obj_distance_max = self.cfg["RL"]["reset"]["obj_dist_max"]
@@ -350,7 +375,7 @@ class Pushing(ArmSim):
             penalty_disp =  -0.01
         else:
             penalty_disp = 0
-        total_reward =  reward_displacement + penalty_disp + reward_distance
+        total_reward =  reward_displacement# + penalty_disp + reward_distance
         self.mean_total_reward_cumul = self.mean_total_reward_cumul + total_reward
         self.mean_disp_reward_cumul = self.mean_disp_reward_cumul + reward_displacement
         self.mean_dist_reward_cumul = self.mean_dist_reward_cumul + reward_distance
@@ -370,9 +395,9 @@ class Pushing(ArmSim):
     def _apply_action(self, action):
         from push_gym.utils.transformations import quaternion_from_euler
         # RL action breackdown
-        x_force = action[0] * self.cfg["RL"]["action"]["x_force_scale"]
-        y_force = action[1] * self.cfg["RL"]["action"]["y_force_scale"]
-        z_force = action[2] * self.cfg["RL"]["action"]["z_force_scale"]
+        self.x_force = action[0] * self.cfg["RL"]["action"]["x_force_scale"]
+        self.y_force = action[1] * self.cfg["RL"]["action"]["y_force_scale"]
+        self.z_force = action[2] * self.cfg["RL"]["action"]["z_force_scale"]
         #dx = action[0] * self.cfg["RL"]["action"]["dx"]
         #dy = action[1]* self.cfg["RL"]["action"]["dy"]
         #dz = action[2] * self.cfg["RL"]["action"]["dz"]
@@ -398,7 +423,7 @@ class Pushing(ArmSim):
 
         compensation_torques = np.asarray(super().get_gravity_compensation(self.robot_joint_pos.tolist(), self.robot_joint_vel.tolist()))
 
-        self.residual_forces = np.array([x_force, y_force, z_force])
+        self.residual_forces = np.array([self.x_force, self.y_force, self.z_force])
 
         self.total_forces = self.forces + self.residual_forces
         self.forces_moments = np.array([self.total_forces[0], self.total_forces[1], self.total_forces[2],
@@ -456,9 +481,14 @@ class Pushing(ArmSim):
         if done == True:
             if self.cfg["name"] == "playing":
                 print("Saving recorded data")
-                self.datarecorder.save_episode_file("/home/btabia/git/residual-pushing/training_records/PPO_287/")
+                folder_name = self.cfg["play"]["data_log_path"] + "policy_" + str(self.cfg["play"]["policy_index"])
+                if os.path.exists(folder_name) == False:
+                    os.makedirs(folder_name)
+                file_name = "/episode_" + str(self.episode_index) + ".json"
+                self.datarecorder.save_episode_file(folder_name + file_name)
                 self.datarecorder.clear_dict()
                 self.datarecorder.reset_dict()
+                self.episode_index = self.episode_index + 1
         return observations, rewards, done, info
 
 

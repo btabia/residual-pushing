@@ -7,12 +7,11 @@ hydra:
     dir: .
 
 play:
-  policy_path: "/home/btabia/git/residual-pushing/training_records/PPO_49/checkpoints/checkpoint_27000000_steps.zip" # /home/btabia/git/virtual-decontamination/records/PPO_592/policy.zip"
-  max_iteration: 10
+  policy_index: 28
+  policy_path: "/home/btabia/git/residual-pushing/training_records/PPO_28/PPO_28_policy.zip" # /home/btabia/git/virtual-decontamination/records/PPO_592/policy.zip"
+  max_iteration: 100
   deterministic: True
-  logger: True
-  headless: False
-  data_log_path: "./play_logs/"
+  data_log_path: "/home/btabia/git/residual-pushing/play_records/"
 
 general: 
 
@@ -42,42 +41,43 @@ RL:
   policy_kwargs:
     nn_config: 
       activation_function: "Relu" 
-      value_function: [512,256,128]
-      policy: [512,256,128]
+      value_function: [128,128,128]
+      policy: [128,128,128]
   policy:
     type: "MLP"
-  max_timestep : 30000000
+  max_timestep : 40000000
   checkpoint: 
     saving_freq: 500000
     base_directory: "../../../training_records/"
   load_policy: False
-  load_policy_path: "/home/btabia/git/residual-pushing/training_records/PPO_287/PPO_287_policy.zip"
+  load_policy_path: "/home/btabia/git/residual-pushing/training_records/PPO_49/checkpoints/checkpoint_27000000_steps.zip"
 
   PPO: 
     verbose: 1 
-    n_steps: 30000
-    batch_size: 1500 # prev 64, take the episode length and divide it by 2
+    n_steps: 20480
+    batch_size: 256 # prev 64, take the episode length and divide it by 2
     learning_rate: 0.000125 # prev 0.000125, new 4.17e-05
     gamma: 0.99
-    ent_coef: 0.1
+    ent_coef: 0.00001
     clip_range: 0.1
     n_epochs: 10
-    gae_lambda: 0.95
+    gae_lambda: 0.99
     max_grad_norm: 0.9
     vf_coef:  1
     device: "cuda"
     tensorboard_log: "./training_data/"
     normalize_advantage: True
+    use_sde: False
     target_kl: 0.005
 
   env: 
     physics_frequency : 100
     rendering_frequency: 100
     skipframe: 1
-    max_episode_length: 3000
+    max_episode_length: 2048
     seed: 0
-    num_action: 6
-    num_observations: 25
+    num_action: 3
+    num_observations: 19
     arm_position: [0.0, -0.198, 0.021]
 
   action: 
@@ -98,7 +98,7 @@ RL:
   reward: 
     speed_target: 9
     object_goal_disp_weight: 1
-    object_goal_dist_weight: 20
+    object_goal_dist_weight: 30
 
     object_goal_speed_tolerance: 1
     object_goal_dist_tolerance: 0.3
@@ -112,3 +112,7 @@ RL:
     max_debris_dist : 0.8
     max_goal_dist: 0.8
     exclusion_dist : 0.11
+    mass_scale: 10
+    lateral_friction_scale: 2.0
+    spinning_friction_scale: 1
+    rolling_friction_scale: 0.001

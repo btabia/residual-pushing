@@ -436,9 +436,9 @@ class Utils:
     '''Environment building functions'''
     ######################################
 
-    def get_cylinder_obj(self):
+    def get_cylinder_obj(self, mass=None, lateral_friction=None, spinning_friction=None):
         obj_id = create_cylinder(self._p, self.client_id, 0.03, 0.06, mass=.1, color=RED)
-        self._p.changeDynamics(obj_id, -1, restitution=0.0, lateralFriction=1.0, spinningFriction=1.0, rollingFriction=0.0001)
+        self._p.changeDynamics(obj_id, -1, restitution=0.0, mass=mass, lateralFriction=lateral_friction, spinningFriction=1.0)
         return obj_id
 
     def get_capsule_obj(self):
@@ -460,22 +460,61 @@ class Utils:
         self._p.changeDynamics(obj_id, -1, mass=0.25, lateralFriction=0.74, rollingFriction=0.00001)
         return obj_id
 
-    def get_cube_obj(self):
+    def get_cube_obj(self, mass=None, lateral_friction=None, spinning_friction=None, rolling_friction=None, scaling=1):
         xpos, ypos, zpos, yaw = sample_pos_in_env(self.sim._workspace_bounds, self._p)
         obj_name = "cube_small.urdf"
-        #obj_name = "lego/lego.urdf"
-        #obj_name = "objects/mug.urdf"
-        #obj_name = "duck_vhacd.urdf"
-        globalScaling = 1
-        if "mug" in obj_name:
-            globalScaling = 0.75
+        globalScaling = scaling
         obj_id = self._p.loadURDF(os.path.join(pybullet_data.getDataPath(), obj_name),
                                   basePosition=[xpos, ypos, zpos], baseOrientation=list(yaw),
                                   flags=self._p.URDF_USE_MATERIAL_COLORS_FROM_MTL,
                                   physicsClientId=self.client_id,globalScaling=globalScaling)
 
-        self._p.changeDynamics(obj_id, -1, restitution=0.0, lateralFriction=1.0, spinningFriction=1.0,
-                               rollingFriction=0.0001)
+        self._p.changeDynamics(obj_id, -1, restitution=0.0, mass=mass, lateralFriction=lateral_friction, 
+                               rollingFriction=rolling_friction)
+        self._p.changeVisualShape(obj_id, -1, rgbaColor=[1, 0, 0, 1], physicsClientId=self.client_id)
+        return obj_id
+    
+    def get_lego_obj(self, mass=None, lateral_friction=None, spinning_friction=None, rolling_friction=None):
+        xpos, ypos, zpos, yaw = sample_pos_in_env(self.sim._workspace_bounds, self._p)
+        obj_name = "lego/lego.urdf"
+        globalScaling = 1
+        obj_id = self._p.loadURDF(os.path.join(pybullet_data.getDataPath(), obj_name),
+                                  basePosition=[xpos, ypos, zpos], baseOrientation=list(yaw),
+                                  flags=self._p.URDF_USE_MATERIAL_COLORS_FROM_MTL,
+                                  physicsClientId=self.client_id,globalScaling=globalScaling)
+
+        #self._p.changeDynamics(obj_id, -1, restitution=0.0, mass=mass, lateralFriction=1.0, spinningFriction=1.0,
+                              # rollingFriction=0.0001)
+        self._p.changeDynamics(obj_id, -1, restitution=0.0, mass=mass, lateralFriction=lateral_friction, 
+                               rollingFriction=rolling_friction)
+        self._p.changeVisualShape(obj_id, -1, rgbaColor=[1, 0, 0, 1], physicsClientId=self.client_id)
+        return obj_id
+    
+    def get_duck_obj(self, mass=None, lateral_friction=None, spinning_friction=None, rolling_friction=None):
+        xpos, ypos, zpos, yaw = sample_pos_in_env(self.sim._workspace_bounds, self._p)
+        obj_name = "duck_vhacd.urdf"
+        globalScaling = 1
+        obj_id = self._p.loadURDF(os.path.join(pybullet_data.getDataPath(), obj_name),
+                                  basePosition=[xpos, ypos, zpos], baseOrientation=list(yaw),
+                                  flags=self._p.URDF_USE_MATERIAL_COLORS_FROM_MTL,
+                                  physicsClientId=self.client_id,globalScaling=globalScaling)
+
+        self._p.changeDynamics(obj_id, -1, restitution=0.0,mass=mass, lateralFriction=lateral_friction, 
+                               rollingFriction=rolling_friction)
+        self._p.changeVisualShape(obj_id, -1, rgbaColor=[1, 0, 0, 1], physicsClientId=self.client_id)
+        return obj_id
+    
+    def get_metal_cube_obj(self, mass=None, lateral_friction=None, spinning_friction=None, rolling_friction=None):
+        xpos, ypos, zpos, yaw = sample_pos_in_env(self.sim._workspace_bounds, self._p)
+        obj_name = "cube_small.urdf"
+        globalScaling = 1
+        obj_id = self._p.loadURDF(os.path.join(pybullet_data.getDataPath(), obj_name),
+                                  basePosition=[xpos, ypos, zpos], baseOrientation=list(yaw),
+                                  flags=self._p.URDF_USE_MATERIAL_COLORS_FROM_MTL,
+                                  physicsClientId=self.client_id,globalScaling=globalScaling)
+
+        self._p.changeDynamics(obj_id, -1, restitution=0.0,mass=mass, lateralFriction=lateral_friction, 
+                               rollingFriction=rolling_friction)
         self._p.changeVisualShape(obj_id, -1, rgbaColor=[1, 0, 0, 1], physicsClientId=self.client_id)
         return obj_id
 
@@ -491,12 +530,39 @@ class Utils:
         #obj_id = self.get_cylinder_obj()
         #obj_id = self.get_sphere_obj()
         #obj_id = self.get_capsule_obj()
-        #obj_id = self.get_cube_obj()
-        obj_id = self.get_block_obj()
+        obj_id = self.get_cube_obj()
+        #obj_id = self.get_block_obj()
         current_config = get_config(obj_id, self._p, self.client_id)
         #if self.check_object_generation_collision(obj_id, pushing_obj=True):
         #    self.reset_obj(obj_id)
         return obj_id
+    
+    def generate_random_object(self, object):
+        # surface is stainless steel
+        obj_id = None
+        if object == "small_cube": #concrete cube 2.8kg/dm3
+            obj_id = self.get_cube_obj(mass=1.4, lateral_friction=0.7,  rolling_friction=0.00001)
+        elif object == "large_cube": # wooden cube , oak density 900g/dm3
+            obj_id = self.get_cube_obj(mass=1, lateral_friction = 0.3,  rolling_friction=0.00001, scaling=2)
+        elif object == "duck": # rubber duck
+            obj_id = self.get_duck_obj(mass=0.01, lateral_friction=0.64,  rolling_friction=0.00001)
+        elif object == "metal_cube": # aluminium cube
+            obj_id = self.get_cube_obj(mass=0.5, lateral_friction = 0.8,  rolling_friction=0.00001, scaling=0.5)
+        elif object == "lego": # hard plastic lego
+            obj_id = self.get_lego_obj(mass=0.005, lateral_friction=0.2, rolling_friction=0.00001)
+        else: 
+            return None
+        return obj_id
+    
+    def generate_new_dynamics(self, obj_id):
+        mass = 1 + (np.random.rand() - 0.5)
+        lateral_friction = 0.5 + (np.random.rand() * 0.6 - 0.3)
+        self._p.changeDynamics(obj_id, -1, restitution=0.0,mass=mass, lateralFriction=lateral_friction, 
+                               rollingFriction=0.00001)
+        return obj_id
+
+    
+
 
     def reset_obj(self, id, positions=None, distance=None):
         self.reset_obj_fix(id, positions)
